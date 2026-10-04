@@ -202,10 +202,23 @@ body:not(.ready) header,body:not(.ready) .hero{opacity:0}
 .bk.rv{opacity:0;translate:0 34px;transition:opacity .55s,translate .55s,background .3s,transform .3s}
 .bk.rv.in{opacity:1;translate:0 0}
 .bk.rv.out{opacity:0;translate:0 -26px}
+.pk{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:10px 0}
+.pk button{display:flex;flex-direction:column;gap:3px;padding:12px 6px;letter-spacing:0}
+.pk button b{font-family:Orbitron,system-ui,sans-serif;font-size:14px;color:var(--st)}
+.pk button span{font-size:12px;color:var(--ac2)}
+.pk button:hover b,.pk button:hover span{color:#04121c}
+#ann{position:fixed;inset:0;z-index:9000;background:#020810e6;display:grid;place-items:center;padding:16px}
+.annbox{position:relative;width:100%;max-width:560px;max-height:86dvh;display:flex;flex-direction:column;background:#0a1626;border:1px solid #38e8ff88;overflow:hidden;box-shadow:0 0 40px #38e8ff33}
+.annX{position:absolute;top:8px;right:8px;z-index:2;width:38px;height:38px;padding:0;clip-path:none;border-radius:50%;background:#050b14;display:grid;place-items:center;font-size:17px;line-height:1}
+.annc{padding:58px 18px 20px;overflow:auto;min-height:0}
+.annc video,.annc iframe{display:block;width:100%;border:0;background:#000;border-radius:4px}
+.annc video{max-height:66dvh}.annc iframe{height:66dvh;background:#fff}
+.annt{margin:0;font-size:17px;line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere}
+.head-actions{flex-wrap:wrap;justify-content:flex-end}.head-actions button{padding:9px 12px;font-size:12px}
 </style></head><body>
 <div id="load"><div class="ldwork"><img class="lg ldlogo" alt="LumenWeb"><div class="shelf"><i style="--h:46px"></i><i style="--h:70px"></i><i style="--h:58px"></i><i style="--h:88px"></i><i style="--h:64px"></i></div><div id="ldbar"><b></b></div><div id="ldpct">0%</div><div id="ldmsg">Preparando tu biblioteca…</div></div><div class="ldwel"><img class="lg ldlogo" alt="LumenWeb"><h2 class="fut" id="ldwt">¡Bienvenido!</h2><p>Disfruta tu lectura</p></div></div>
-<header><img class="lg hl" alt="LumenWeb"><div class="head-actions"><button id="accountBtn">Iniciar sesión</button><button id="up" class="solid hid">+ Subir libro</button></div></header>
-<section class="hero"><p class="fut tag">// UN LIBRO EN UN SOLO LUGAR</p><h1 class="fut">LIBROS</h1><div class="bar"><button id="searchName">Buscar por nombre</button><button id="searchCode">Buscar por Código</button><button id="cj">Canjear código</button><button id="gd">Libros guardados</button></div>
+<header><img class="lg hl" alt="LumenWeb"><div class="head-actions"><button id="accountBtn">Iniciar sesión</button><button id="up" class="solid hid">+ Subir libro</button><button id="annBtn" class="solid hid">Comunicar anuncio</button></div></header>
+<section class="hero"><p class="fut tag">// UN LIBRO EN UN SOLO LUGAR</p><h1 class="fut">LIBROS</h1><div class="bar"><button id="searchName">Buscar por nombre</button><button id="searchCode">Buscar por Código</button><button id="cj">Canjear código</button><button id="gd">Libros guardados</button><button id="shop" class="solid">◈ Shop</button></div>
 <div class="filters" id="filters"><button type="button" data-f="all" class="on">Todos</button><button type="button" data-f="libro">Libro</button><button type="button" data-f="juego">Juego</button></div>
 <div class="hud"><div class="lux">Tus LUX (+10/min)<b id="luxN">0</b><span class="lxbar"><i id="luxBar"></i></span></div><div>Tiempo en la página<b id="stay">0d 00h 00m 00s</b></div></div></section>
 <div id="grid"></div>
@@ -237,7 +250,7 @@ body:not(.ready) header,body:not(.ready) .hero{opacity:0}
 
 <script>
 // ====== CONFIGURA AQUÍ ======
-const CFG={pinHash:"9c4b0ca6b8825e902855d52cc9c250e732c20a7b7d9c9fc583a16de5230b915e",wa:"595984906724",bank:"Banco: Interfisa\nAlias: 4117609"};
+const CFG={pinHash:"9cf349f1afd1d364f185cba582d6cb80351bf725c544cf7a4e5f10ae063abce2",wa:"595984906724",bank:"Banco: Interfisa\nAlias: 4117609"};
 // ====== NUBE PÚBLICA DE LIBROS ======
 // LumenWeb usa almacenamiento público de Netlify Blobs. No necesitas configurar una base externa.
 const CLOUD={url:'/.netlify/functions/lumen-books'};
@@ -291,9 +304,11 @@ let S={books:[],codes:[],owned:[],visibleCodes:{}},owner=false,ownerToken="";
 try{const t=JSON.parse(localStorage.getItem('lib')||'null');if(t)S=Object.assign(S,t)}catch(e){}
 S.visibleCodes=S.visibleCodes||{};
 let applyAccess=!!S.applyAccess,FIL='all';
-const save=()=>{try{localStorage.setItem('lib',JSON.stringify(S))}catch(e){}};
+function saveAuth(){const d=JSON.stringify({a:S.accounts,s:S.session,m:S.mine});try{localStorage.setItem('lumen_auth',d)}catch(e){}try{fput('auth',d).catch(()=>{})}catch(e){}}
+const save=()=>{saveAuth();try{localStorage.setItem('lib',JSON.stringify(S))}catch(e){try{localStorage.setItem('lib',JSON.stringify({...S,books:S.books.map(b=>({...b,cover:''}))}))}catch(_){}}};
 S.accounts=Array.isArray(S.accounts)?S.accounts:[];
 S.session=S.session||null;
+try{const A=JSON.parse(localStorage.getItem('lumen_auth')||'null');if(A){if(Array.isArray(A.a))S.accounts=A.a;if(A.s)S.session=A.s;if(A.m)S.mine=A.m}}catch(e){}
 function currentAccount(){return S.session?S.accounts.find(a=>a.email===S.session.email):null}
 function getOwned(){const a=currentAccount();return a? (a.owned=Array.isArray(a.owned)?a.owned:[],a.owned) : []}
 function setOwned(ids){const a=currentAccount();if(a){a.owned=[...new Set(ids)];S.session={name:a.name,email:a.email,phone:a.phone||''};save()}}
@@ -391,9 +406,9 @@ drawReviews();
 renderAccount();
 
 // Modo dueño
-$('#lock').onclick=()=>{if(owner){owner=false;ownerToken='';$('#up').classList.add('hid');$('#lock').textContent='🔒';drawReviews();draw();return}
+$('#lock').onclick=()=>{if(owner){owner=false;ownerToken='';$('#up').classList.add('hid');$('#annBtn').classList.add('hid');$('#lock').textContent='🔒';drawReviews();draw();return}
 M('<h2>MODO DUEÑO</h2><label>Código de dueño</label><input id="pn" type="password" autocomplete="off" autocapitalize="characters"><p id="ms"></p><div class="row"><button class="solid" id="ok">Entrar</button></div>');
-$('#ok').onclick=async()=>{try{const tok=await sha256($('#pn').value.trim().toUpperCase());if(tok===CFG.pinHash){owner=true;ownerToken=tok;$('#up').classList.remove('hid');$('#lock').textContent='🔓';X();drawReviews();draw()}else{$('#pn').value='';$('#ms').textContent='Código incorrecto.'}}catch(e){$('#ms').textContent='No se pudo verificar el acceso en este navegador.'}}};
+$('#ok').onclick=async()=>{try{const tok=await sha256($('#pn').value.trim().toUpperCase());if(tok===CFG.pinHash){owner=true;ownerToken=tok;$('#up').classList.remove('hid');$('#annBtn').classList.remove('hid');$('#lock').textContent='🔓';X();drawReviews();draw()}else{$('#pn').value='';$('#ms').textContent='Código incorrecto.'}}catch(e){$('#ms').textContent='No se pudo verificar el acceso en este navegador.'}}};
 
 // Subir libro (archivo PDF o HTML desde el teléfono / Drive)
 $('#up').onclick=()=>{M('<h2>SUBIR LIBRO</h2><label>Archivo del libro (PDF o HTML). Elígelo desde tu teléfono o Google Drive</label><input id="pf" type="file" accept=".pdf,.html,.htm,application/pdf,text/html"><label>Título (vacío = nombre del archivo)</label><input id="t"><label>Precio (USD)</label><input id="pc" type="number" min="0" step="0.01"><label>Código del libro (lo inventas tú)</label><input id="bookCode" autocapitalize="characters" autocomplete="off" placeholder="Ej. 197K6Kb79"><label>Precio en LUX (monedas)</label><input id="luxP" type="number" min="0" step="50" placeholder="Ej. 3000 (vacío = 3000)"><label>Portada (opcional)</label><input id="cf" type="file" accept="image/*"><p id="ms"></p><div class="row"><button class="solid" id="sv">Subir libro</button></div>');
@@ -587,4 +602,59 @@ function reveal(g){if(!('IntersectionObserver' in window)||matchMedia('(prefers-
   IO=new IntersectionObserver(es=>es.forEach(e=>{const c=e.target.classList;if(e.isIntersecting){c.add('in');c.remove('out')}else if(e.boundingClientRect.top<innerHeight/2){c.remove('in');c.add('out')}else c.remove('in','out')}),{rootMargin:'-70px 0px -6% 0px',threshold:.08});
   g.querySelectorAll('.bk').forEach(e=>{const r=e.getBoundingClientRect();e.classList.add('rv');if(r.bottom<=70)e.classList.add('out');else if(r.top<innerHeight*.94)e.classList.add('in');IO.observe(e)})}
 $('#filters').onclick=e=>{const t=e.target.closest('button');if(!t)return;FIL=t.dataset.f;document.querySelectorAll('#filters button').forEach(x=>x.classList.toggle('on',x===t));draw()};
+
+// ====== SHOP, CÓDIGOS DE REGALO, ANUNCIOS Y SESIÓN PERMANENTE ======
+const XT='/.netlify/functions/lumen-extra',PACKS=[[20,2000],[100,8000],[200,15000],[500,35000],[1000,65000],[2000,120000],[5000,280000]];
+const xj=async(a,o)=>{const r=await fetchWithTimeout(XT+'?action='+a,o||{},20000),d=await r.json().catch(()=>({}));if(!r.ok)throw{status:r.status,d};return d};
+const xo=(a,b)=>xj(a,{method:'POST',headers:{...ownerHeader(),'Content-Type':'application/json'},body:JSON.stringify(b||{})});
+const xErr=e=>e.status===401?'El código de dueño no coincide con el del servidor (Netlify).':'Falta activar lumen-extra.mjs en Netlify.';
+function shop(){
+  M('<h2>◈ SHOP · LUX</h2><p>Tienes <b>'+nf(luxBal())+' LUX</b>. Elige un paquete:</p><div class="pk">'+PACKS.map((p,i)=>'<button type="button" data-p="'+i+'"><b>'+nf(p[0])+' LUX</b><span>'+nf(p[1])+' Gs</span></button>').join('')+'</div>'+(owner?'<div class="row"><button class="solid" id="money">Money · regalar LUX</button></div>':'')+'<h3>Códigos de regalo</h3><label>Pega aquí tu código</label><input id="gc" autocomplete="off" autocapitalize="characters" placeholder="Código de regalo"><p id="gcM"></p><div class="row"><button class="solid" id="gcGo">Canjear código</button></div>');
+  document.querySelectorAll('.pk button').forEach(b=>b.onclick=()=>buyPack(+b.dataset.p));
+  if($('#money'))$('#money').onclick=money;
+  $('#gcGo').onclick=async()=>{const c=$('#gc').value.replace(/[^A-Za-z0-9]/g,'').toUpperCase();if(!c){$('#gcM').textContent='Escribe tu código.';return}$('#gcM').textContent='Verificando…';
+    try{const d=await xj('gift-redeem',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:c})});LX.sp-=d.lux;saveLX();luxHud();$('#gcM').textContent='✓ Canjeado: +'+nf(d.lux)+' LUX. Ahora tienes '+nf(luxBal())+' LUX.'}
+    catch(e){const k=e.d&&e.d.e;$('#gcM').textContent=k==='used'?'Este código ya fue usado.':k==='nf'?'Código no encontrado.':'No se pudo verificar el código. Inténtalo de nuevo.'}}}
+function buyPack(i){const [l,g]=PACKS[i];
+  M('<h2>COMPRAR '+nf(l)+' LUX</h2><div class="transfer-help"><h3>💳 ¿Cómo funciona la transferencia?</h3><p>1) Transfiere <b>'+nf(g)+' Gs</b> a la cuenta de abajo.<br>2) Pulsa “Ya hice la transferencia” y te llevamos a WhatsApp.<br>3) Al confirmar tu pago te envío un <b>código de regalo</b>. Lo pones en Shop → Códigos de regalo y tus LUX se suman.</p><pre>'+esc(CFG.bank)+'</pre><div class="row"><a class="wa-help" href="https://wa.me/'+CFG.wa+'?text='+encodeURIComponent('Hola, necesito ayuda para comprar LUX en LumenWeb.')+'" target="_blank" rel="noopener"><button type="button">💬 WhatsApp — Más información</button></a><button class="solid" id="pd">Ya hice la transferencia</button></div></div><div class="row"><button id="bk">← Volver al Shop</button></div>');
+  $('#bk').onclick=shop;
+  $('#pd').onclick=()=>{M('<h2>TRANSFERENCIA EXITOSA</h2><p>¿Confirmas que ya hiciste la transferencia de '+nf(g)+' Gs?</p><div class="row"><button class="solid" id="y">Sí, es exitosa</button><button id="n">No</button></div>');$('#n').onclick=X;
+    $('#y').onclick=()=>{const u='https://wa.me/'+CFG.wa+'?text='+encodeURIComponent('Hola, hice la transferencia por el paquete de '+nf(l)+' LUX ('+nf(g)+' Gs) en LumenWeb. Quisiera mi código de regalo.');if(!window.open(u,'_blank'))location.href=u;X()}}}
+function money(){if(!owner)return;
+  M('<h2>MONEY · REGALAR LUX</h2><p>Elige el paquete. Se crea un código largo de un solo uso.</p><div class="pk">'+PACKS.map((p,i)=>'<button type="button" data-p="'+i+'"><b>'+nf(p[0])+' LUX</b></button>').join('')+'</div><div class="row"><button id="bk">← Volver al Shop</button></div><p id="mm"></p>');$('#bk').onclick=shop;
+  document.querySelectorAll('.pk button').forEach(b=>b.onclick=async()=>{const l=PACKS[+b.dataset.p][0];$('#mm').textContent='Creando código…';
+    try{const d=await xo('gift-create',{lux:l});M('<h2>CÓDIGO DE '+nf(l)+' LUX</h2><p>De un solo uso. Pásaselo a quien quieras:</p><div class="code" style="font-size:13px;word-break:break-all;letter-spacing:.06em">'+esc(d.code)+'</div><div class="row"><button class="solid" id="cp">Copiar código</button><button id="bk2">← Volver</button></div>');
+      $('#cp').onclick=()=>{try{navigator.clipboard.writeText(d.code);$('#cp').textContent='¡Copiado!'}catch(e){}};$('#bk2').onclick=money}
+    catch(e){$('#mm').textContent=xErr(e)}})}
+$('#shop').onclick=shop;
+
+// ---- Anuncios (el dueño los sube; todos los ven al entrar) ----
+const annDone=()=>{M('<h2>✓ ANUNCIO SUBIDO</h2><p>Subido anuncio exitosamente. Ya lo ve cualquiera que entre.</p><div class="row"><button class="solid" id="c">Cerrar</button></div>');$('#c').onclick=X};
+$('#annBtn').onclick=()=>{M('<h2>COMUNICAR ANUNCIO</h2><div class="row"><button class="solid" id="aF">Comunicar desde un archivo</button><button class="solid" id="aT">Comunicar desde un texto</button></div><div class="row"><button id="aX">Quitar anuncio actual</button></div><p id="aM"></p>');
+  $('#aF').onclick=annFile;$('#aT').onclick=annText;
+  $('#aX').onclick=async()=>{try{await xo('ann-clear');$('#aM').textContent='Anuncio quitado.'}catch(e){$('#aM').textContent=xErr(e)}}};
+function annText(){M('<h2>COMUNICAR DESDE UN TEXTO</h2><label>Escribe tu mensaje (puedes usar emojis y stickers 🎉)</label><textarea id="aTx" maxlength="1500" style="width:100%;min-height:130px;margin:6px 0 10px;padding:11px;background:#0c0c0f;border:1px solid var(--line);color:var(--tx);border-radius:4px;font:inherit"></textarea><p id="aM"></p><div class="row"><button class="solid" id="aGo">Subir</button></div>');
+  $('#aGo').onclick=async()=>{const t=$('#aTx').value.trim();if(!t){$('#aM').textContent='Escribe el texto del anuncio.';return}$('#aM').textContent='Subiendo…';try{await xo('ann-save',{kind:'text',text:t});annDone()}catch(e){$('#aM').textContent=xErr(e)}}}
+function annFile(){M('<h2>COMUNICAR DESDE UN ARCHIVO</h2><label>Video o página HTML</label><input id="aFi" type="file" accept="video/*,.html,.htm,text/html"><p id="aM"></p><div class="row"><button class="solid" id="aGo">Aceptar</button></div>');
+  $('#aGo').onclick=async()=>{const f=$('#aFi').files[0];if(!f){$('#aM').textContent='Elige un video o un HTML.';return}
+    const vid=/^video\//.test(f.type)||/\.(mp4|webm|mov|m4v)$/i.test(f.name),C=3500000,n=Math.max(1,Math.ceil(f.size/C));
+    try{for(let i=0;i<n;i++){$('#aM').textContent='Subiendo '+Math.round(i/n*100)+'%';const r=await fetchWithTimeout(XT+'?action=ann-chunk&part='+i,{method:'POST',headers:ownerHeader(),body:f.slice(i*C,(i+1)*C)},90000);if(!r.ok)throw{status:r.status}}
+      await xo('ann-save',{kind:vid?'video':'html',chunks:n,mime:vid?(f.type||'video/mp4'):'text/html'});annDone()}catch(e){$('#aM').textContent=xErr(e)}}}
+let annUrl='';
+function annClose(){const a=$('#ann');if(a)a.remove();if(annUrl){URL.revokeObjectURL(annUrl);annUrl=''}}
+async function annShow(m){annClose();const o=document.createElement('div');o.id='ann';o.innerHTML='<div class="annbox"><button type="button" class="annX" aria-label="Cerrar anuncio">✕</button><div class="annc"><div class="empty">Cargando anuncio…</div></div></div>';document.body.appendChild(o);
+  const c=o.querySelector('.annc');o.querySelector('.annX').onclick=annClose;o.onclick=e=>{if(e.target===o)annClose()};
+  try{if(m.kind==='text'){c.innerHTML='<p class="annt">'+esc(m.text)+'</p>';return}
+    const ps=await Promise.all(Array.from({length:m.chunks},(_,i)=>fetch(XT+'?action=ann-file&part='+i+'&v='+m.v).then(r=>{if(!r.ok)throw 0;return r.blob()})));
+    if(!$('#ann'))return;const b=new Blob(ps,{type:m.mime});
+    if(m.kind==='video'){annUrl=URL.createObjectURL(b);c.innerHTML='<video controls autoplay muted playsinline src="'+annUrl+'"></video>'}
+    else{const f=document.createElement('iframe');f.sandbox='allow-scripts';f.srcdoc=await b.text();c.innerHTML='';c.appendChild(f)}}
+  catch(e){annClose()}}
+async function annCheck(){try{const m=await xj('ann');if(!m||!m.v||sessionStorage.getItem('lumen_ann')===String(m.v))return;sessionStorage.setItem('lumen_ann',String(m.v));annShow(m)}catch(e){}}
+addEventListener('keydown',e=>{if(e.key==='Escape')annClose()});
+const annW=setInterval(()=>{if(document.body.classList.contains('ready')){clearInterval(annW);annCheck();setInterval(annCheck,60000)}},400);
+
+// ---- Sesión permanente: respaldo en IndexedDB y almacenamiento persistente ----
+fget('auth').then(d=>{if(d&&!S.session){try{const A=JSON.parse(d);if(Array.isArray(A.a)&&A.a.length){S.accounts=A.a;S.session=A.s||null;if(A.m)S.mine=A.m;saveAuth();renderAccount()}}catch(e){}}}).catch(()=>{});
+try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist().catch(()=>{})}catch(e){}
 </script></body></html>
